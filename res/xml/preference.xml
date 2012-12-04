@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:key="@string/preference"
+  android:title="@string/preference"
+  android:summary="Set arguments for sampling audio finger-print">
+    
+    <EditTextPreference
+    	android:key="sampling_time"
+    	android:title="@string/sampling_time"
+    	android:summary="millisecond" />
+   	<EditTextPreference
+    	android:key="delayed_time"
+    	android:title="@string/delayed_time"
+    	android:summary="millisecond" />
+    <EditTextPreference
+    	android:key="redundant_time"
+    	android:title="@string/redundant_time"
+    	android:summary="millisecond" />
+    <EditTextPreference
+    	android:key="sampling_rate"
+    	android:title="@string/sampling_rate"
+    	android:summary="Hz" />
+    <EditTextPreference
+    	android:key="frame_length"
+    	android:title="@string/frame_length"
+    	android:summary="Length of a frame of time, must be a power of 2 (for FFT)" />
+    <EditTextPreference
+    	android:key="band_length"
+    	android:title="@string/band_length"
+    	android:summary="Length of a band of frequency, must smaller than frame length" />
+    <EditTextPreference
+    	android:key="debug_mode"
+    	android:title="@string/debug_mode"
+    	android:summary="Debug or not Debug, mainly for orienting commit and decommmit process" />
+    	
+    <!-- <EditTextPreference
+    	android:key="@string/nFrame"
+    	android:title="@string/nFrame"
+    	android:summary="Do not edit! This is just for reference." />
+    <EditTextPreference
+    	android:key="@string/nBand"
+    	android:title="@string/nBand"
+    	android:summary="Do not edit! This is just for reference." /> -->
+    
+</PreferenceScreen>

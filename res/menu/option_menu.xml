@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/scan"
+          android:title="@string/scan" />
+    <item android:id="@+id/discoverable"
+          android:title="@string/discoverable" />
+    <item android:id="@+id/sync"
+          android:title="@string/sync" />
+    <item android:id="@+id/get_sample"
+          android:title="@string/get_sample" />
+    <item android:id="@+id/compare"
+          android:title="@string/compare" />
+    <item android:id="@+id/calculateFP"
+          android:title="@string/calculateFP" />
+    <item android:id="@+id/save"
+          android:title="@string/save" />
+    <item android:id="@+id/arguments"
+          android:title="@string/arguments" />
+    <item android:id="@+id/default_arguments"
+          android:title="@string/default_arguments" />
+    <item android:id="@+id/sync_pattern" 
+    	  android:title="@string/sync_pattern"/>
+    <item android:id="@+id/commit"
+    	  android:title="@string/commit"/>
+   	<item android:id="@+id/decommit"
+    	  android:title="@string/decommit"/>
+   	<item android:id="@+id/test"
+    	  android:title="@string/test"
+    	  android:visible="false"/>
+   	<item android:id="@+id/test_decommit"
+    	  android:title="@string/test_decommit"
+    	  android:visible="false"/>
+   	<item android:id="@+id/comparison_table"
+    	  android:title="@string/comparison_table"/>
+   	<item android:id="@+id/save_ct"
+    	  android:title="@string/save_ct"/>
+</menu>

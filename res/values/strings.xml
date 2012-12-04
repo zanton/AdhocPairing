@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hello">Hello World, AdhocPairingActivity!</string>
+    <string name="app_name">AdhocPairing</string>
+    
+    <!-- Options Menu -->
+    <string name="scan">Connect a device</string>
+    <string name="discoverable">Make discoverable</string>
+    <string name="sync">Sync time</string>
+    <string name="get_sample">Get audio sample</string>
+    <string name="compare">Compare fingerprint</string>
+    <string name="arguments">Parameters</string>
+    <string name="default_arguments">Reset all parameters to default</string>
+    <string name="calculateFP">Calculate finger-print</string>
+    <string name="save">Save recorded data to file</string>
+    <string name="sync_pattern">Sync by pattern</string> <!--  &amp; Save</string> -->
+    <string name="commit">Commit</string>
+    <string name="decommit">Decommit</string>
+    <string name="test">Test</string>
+    <string name="test_decommit">Test decommit</string>
+    <string name="comparison_table">Comparison Table</string>
+    <string name="save_ct">Save Comparison Table</string>
+    
+    <!--  DeviceListActivity -->
+    <string name="scanning">scanning for devices...</string>
+    <string name="select_device">select a device to connect</string>
+    <string name="none_paired">No devices have been paired</string>
+    <string name="none_found">No device found</string>
+    <string name="title_paired_devices">Paired Devices</string>
+    <string name="title_other_devices">Other Available Devices</string>
+    <string name="button_scan">Scan for devices</string>
+    
+    <!--  AdhocPairingActivity -->
+    <string name="title_connected_devices">Connected Devices</string>
+    <string name="title_status_frame">Status Board</string>
+    <string name="title_not_connected">not connected</string>
+    <string name="title_connecting">connecting...</string>
+    <string name="title_listening">listening...</string>
+    <string name="none_connected">No device connected</string>
+    <string name="title_recording">recording...</string>
+    
+    <!--  DeviceSelector -->
+    <string name="title_devices_list">Currently Connected Devices</string>
+    <string name="pick_device">pick a device to compare</string>
+    
+    <!--  AdhocPairingPreferenceActivity -->
+    <string name="preference">Parameters</string>
+    <string name="sampling_time">Sampling Time</string>
+    <string name="delayed_time">Delayed Time</string>
+    <string name="redundant_time">Redundant Time</string>
+    <string name="sampling_rate">Sampling Rate</string>
+    <string name="frame_length">Frame Length</string>
+    <string name="band_length">Band Length</string>
+    <string name="nFrame">Number of frames</string>
+    <string name="nBand">Number of bands</string>
+    <string name="debug_mode">Debug Mode</string>
+    
+    <!--  ShiftTimeInputActivity -->
+    <string name="shift_time_input">Input Shift Time</string>
+    <string name="title_shift_time_input">Set the time amount you want to shift the audio sample of this device</string>
+    <string name="title_shift_time_checkbox">Check if you want to auto-compare all possible shift-times</string>
+    
+    <!--  DiffPercentInputActivity -->
+    <string name="diff_percent_input">Input Different Percent</string>
+    <string name="title_diff_percent_input">Input different percents</string>
+    
+</resources>

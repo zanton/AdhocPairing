@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    >
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/title_shift_time_input"
+        android:background="#666"
+        android:textColor="#fff"
+        android:paddingLeft="5dp"
+    />
+    <EditText android:id="@+id/shift_time_edittext"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="0"
+    />
+    <CheckBox android:id="@+id/shift_time_checkbox"
+    	android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/title_shift_time_checkbox"
+        android:checked="false"
+    />
+    <LinearLayout android:orientation="horizontal"
+    	android:layout_width="fill_parent"
+    	android:layout_height="fill_parent">
+    	<Button
+    		android:id="@+id/button_ok"
+    		android:text="OK"
+    		android:layout_width="fill_parent"
+    		android:layout_height="fill_parent"
+    	/>
+    	<Button
+    		android:id="@+id/button_cancel"
+    		android:text="Cancel"
+    		android:layout_width="fill_parent"
+    		android:layout_height="fill_parent"
+    	/>
+    </LinearLayout>
+</LinearLayout>
