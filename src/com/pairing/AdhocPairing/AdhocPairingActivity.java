@@ -62,6 +62,7 @@ public class AdhocPairingActivity extends Activity {
     public static final byte COMMAND_RECEIVE_COMMIT = 6;
     public static final byte COMMAND_CREATE_COMPARISON_TABLE = 7;
     public static final byte COMMAND_SEND_NEXT_FINGERPRINT = 8;
+    public static final byte COMMAND_CREATE_COMPARISON_TABLE_2 = 9;
     
 	// Intent request codes
     private static final int REQUEST_DEVICE_TO_CONNECT = 1;
@@ -76,6 +77,7 @@ public class AdhocPairingActivity extends Activity {
     private static final int REQUEST_SHIFT_TIME_DECOMMIT = 10;
     private static final int REQUEST_SHIFT_TIME_SENDBACK_FP = 11;
     private static final int REQUEST_DEVICE_FOR_COMPARISON_TABLE = 12;
+    private static final int REQUEST_DEVICE_FOR_COMPARISON_TABLE_2 = 13;
     
     // Initial number of devices
     private static final int DEVICE_NUMBER = 10;
@@ -127,6 +129,16 @@ public class AdhocPairingActivity extends Activity {
 	private byte[] transmitter_finger = null;
 	private int[][] ct = new int[AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS][AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS];
 	
+	// Temporary objects for generation process of comparison table 2
+	// Transmitter
+	private boolean waitingFP_CT_2 = false;
+	// Receiver
+	private boolean waitingFP2_CT_2 = false;
+	private int[] ct2_shifttable = {-50, -45, -40, -35, -30, -25, -20, -15, -10, -5,
+						   0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50};
+	private int currentshift = 0;
+	private int[] ct2 = new int[21];
+
 	
 	// Latency for synchronization
 	private long time_offset = 0;
@@ -428,6 +440,16 @@ public class AdhocPairingActivity extends Activity {
 	    	}
 	    	break;
 	    	
+	    case REQUEST_DEVICE_FOR_COMPARISON_TABLE_2:
+	    	// When DeviceSelector returns with a device to compare with
+	    	if (resultCode == Activity.RESULT_OK) {
+	    		// Get the BluetoothDevice object
+	    		BluetoothDevice device = (BluetoothDevice) data.getParcelableExtra(DeviceSelector.DEVICE_OBJECT);
+	    		receiver_CT = device;
+	    		sendFP_CT_2();
+	    	}
+	    	break;
+	    	
 	    }
 	    
 	}
@@ -593,7 +615,20 @@ public class AdhocPairingActivity extends Activity {
 	    
 	    case R.id.save_ct:
 	    	saveComparisonTable();
-	    	return true;	
+	    	return true;
+	    	
+	    case R.id.comparison_table_2:
+	    	// Check if there's sample already
+	    	if (!mAudioFingerprint.isDataReady()) {
+	    		Toast.makeText(getApplicationContext(), "There is not recorded audio data yet",
+	                    Toast.LENGTH_SHORT).show();
+	    		return true;
+	    	}
+	    	// Launch DeviceSelector to choose device for comparing
+	    	Intent selectorIntent3 = new Intent(this, DeviceSelector.class);
+	    	selectorIntent3.putExtra(DeviceSelector.DEVICE_LIST, mConnectedDevicesArrayList);
+	    	startActivityForResult(selectorIntent3, REQUEST_DEVICE_FOR_COMPARISON_TABLE_2);
+	    	return true;
 	    	
 	    }
 	    return false;
@@ -1090,6 +1125,30 @@ public class AdhocPairingActivity extends Activity {
     	}
     }
     
+    // Send FP for creating Comparison Table 2
+    private void sendFP_CT_2() {
+    	// Check if the FP exists
+    	int shiftTime = 0;
+		if (mAudioFingerprint.getFingerprint(shiftTime) == null) {
+			waitingFP_CT_2 = true;
+			mAudioFingerprint.calculateFingerprint(shiftTime);
+			return;
+		}
+		// Send FP data
+		byte[][] finger = mAudioFingerprint.getFingerprint(shiftTime);
+    	if (finger == null) 
+    		sendTo("Cannot extract finger-print", receiver_CT);
+    	else {
+    		int n = finger.length;
+    		int m = finger[0].length;
+    		byte[] send = new byte[n*m];
+    		for (int i=0; i<n; i++)
+    			for (int j=0; j<m; j++)
+    				send[i*m + j] = finger[i][j];
+    		sendTo(COMMAND_CREATE_COMPARISON_TABLE_2, receiver_CT, send);
+    	}
+    }
+    
     // Compare received FP with internal FPs
     private void create_CT() {
     	// Check if the FP exists
@@ -1130,6 +1189,41 @@ public class AdhocPairingActivity extends Activity {
     				addStatus(str);
     			}
     		}
+    	}
+    }
+    
+    // Compare received FP with internal FPs, shift around (instead of pattern matching)
+    private void create_CT_2() {
+    	// Check if the FP exists
+    	int shiftTime = ct2_shifttable[currentshift];
+		if (mAudioFingerprint.getFingerprint(shiftTime) == null) {
+			waitingFP2_CT_2 = true;
+			mAudioFingerprint.calculateFingerprint(shiftTime);
+			return;
+		}
+		// Compare and store results
+    	int hamming = mAudioFingerprint.calculateHammingDistance(transmitter_finger, shiftTime);
+    	if (hamming == -1)
+    		addStatus("create_CT(): finger-print not calculated, cannot compare");
+    	else {
+    		ct2[currentshift] = (AudioFingerprint.fingerprintBits - hamming) * 100 / AudioFingerprint.fingerprintBits;
+    		String str = "currentshift=" + Integer.toString(currentshift) + " ("
+    					+ Integer.toString(ct2_shifttable[currentshift]) + "): " + Integer.toString(ct2[currentshift]) + "%";
+    		addStatus(str);
+    	}
+    	currentshift++;
+    	if (currentshift < ct2_shifttable.length)
+    		create_CT_2();
+    	else {
+    			// Output the Comparison Table
+    			int n = ct2_shifttable.length;
+    			String str = "";
+    			for (int i=0; i<n; i++) {
+    				str += Integer.toString(ct2_shifttable[i]) + ": ";
+    				str += Integer.toString(ct2[i]) + "%";
+    				if (i<n-1) str += ", ";
+    			}
+    			addStatus(str);
     	}
     }
     
@@ -1349,6 +1443,13 @@ public class AdhocPairingActivity extends Activity {
                 	if (currentMatchingPos_CT < AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS)
                 		sendFP_CT();
                 	break;
+                
+                case COMMAND_CREATE_COMPARISON_TABLE_2:
+                	addStatus("Going to create Comparison Table 2 with " + device.getName());
+                	transmitter_CT = device;
+                	transmitter_finger = msg.getData().getByteArray(BYTE_ARRAY);
+                	create_CT_2();
+                	break;
                 	
                 } // switch
                 break; // case MESSAGE_RECEIVE_COMMAND
@@ -1394,9 +1495,17 @@ public class AdhocPairingActivity extends Activity {
             		waitingFP_CT = false;
             		sendFP_CT();
             	}
+            	if (waitingFP_CT_2) {
+            		waitingFP_CT_2 = false;
+            		sendFP_CT_2();
+            	}
             	if (waitingFP2_CT) {
             		waitingFP2_CT = false;
             		create_CT();
+            	}
+            	if (waitingFP2_CT_2) {
+            		waitingFP2_CT_2 = false;
+            		create_CT_2();
             	}
             	break;
                 

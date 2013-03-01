@@ -1,6 +1,7 @@
 package com.pairing.AdhocPairing;
 
 import android.util.Log;
+import java.lang.Math;
 
 
 public class FFT {
@@ -125,6 +126,21 @@ public class FFT {
             System.out.println(x[i]);
         }
         System.out.println();
+    }
+    
+    // Hanning window function
+    public static double window_hanning(int n, int N) {
+    	return 0.5*(1 - Math.cos(2*Math.PI*n/(double) (N-1)));
+    }
+    
+    // Blackman-Nuttall window function
+    public static double window_blackman(int n, int N) {
+    	double a0 = 0.3635819;
+    	double a1 = 0.4891775;
+    	double a2 = 0.1365995;
+    	double a3 = 0.0106411;
+    	return a0 - a1*Math.cos(2*Math.PI*n/(double) (N-1)) + a2*Math.cos(4*Math.PI*n/(double) (N-1)) 
+    			- a3*Math.cos(6*Math.PI*n/(double) (N-1));
     }
 
 }

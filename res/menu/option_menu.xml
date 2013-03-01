@@ -35,4 +35,6 @@
     	  android:title="@string/comparison_table"/>
    	<item android:id="@+id/save_ct"
     	  android:title="@string/save_ct"/>
+   	<item android:id="@+id/comparison_table_2"
+    	  android:title="@string/comparison_table_2"/>
 </menu>

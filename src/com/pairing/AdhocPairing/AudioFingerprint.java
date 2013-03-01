@@ -1,6 +1,9 @@
 package com.pairing.AdhocPairing;
 
-import java.io.FileWriter;
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -392,18 +395,33 @@ public class AudioFingerprint {
     						+ Integer.toString(redundant_time) + "_"
     						+ Integer.toString(frame_length) + "_"
     						+ Integer.toString(band_length);
-		String filename = time_string + "_" + args_string + "_" + device_name + ".txt";
+		String filename = time_string + "_" + args_string + "_" + device_name + ".raw";
+		String path = Environment.getExternalStorageDirectory().getAbsolutePath();
+		String path_filename = path + "/AdhocPairing/" + filename;
 		
 		try {
-			//FileWriter f = new FileWriter("/sdcard/AdhocPairing/" + filename);
-			String path = Environment.getExternalStorageDirectory().getAbsolutePath();
-			FileWriter f = new FileWriter(path + "/AdhocPairing/" + filename);
+			
+			// Using FileWriter
+			/*FileWriter f = new FileWriter(path_filename);
 			for (int i=0; i<bufferSize; i++) {
 				//if (i%10 == 0)
 					//f.write("\n");
 				f.write(Short.toString(audioBuffer[i]) + ",");
 			}
-			f.close();
+			f.flush();
+			f.close();*/
+			
+			// Using FileOutputStream
+			File file = new File(path_filename);
+			FileOutputStream fos = new FileOutputStream(file);
+			BufferedOutputStream bos = new BufferedOutputStream(fos);
+			DataOutputStream dos = new DataOutputStream(bos);
+			for (int i=0; i<bufferSize; i++) {
+				dos.writeShort(audioBuffer[i]);
+			}
+			dos.flush();
+			dos.close();
+			
 		} catch(IOException e) {
 			postStatus("Cannot open file to write.");
 			return ;
@@ -645,6 +663,10 @@ public class AudioFingerprint {
 							frame[j] = audioSequence[i*frame_length + j];
 						else 
 							frame[j] = 0;
+					
+					// apply windown function
+					for (int j=0; j<frame_length; j++)
+						frame[j] = (short) (FFT.window_hanning(j, frame_length) * (double) frame[j]);
 					
 					// FFT the frame i-th
 					Complex[] complex = new Complex[frame_length];

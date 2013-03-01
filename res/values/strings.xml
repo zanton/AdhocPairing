@@ -20,6 +20,7 @@
     <string name="test_decommit">Test decommit</string>
     <string name="comparison_table">Comparison Table</string>
     <string name="save_ct">Save Comparison Table</string>
+    <string name="comparison_table_2">Comparison Table 2</string>
     
     <!--  DeviceListActivity -->
     <string name="scanning">scanning for devices...</string>
