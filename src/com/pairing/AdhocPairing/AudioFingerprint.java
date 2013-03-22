@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Random;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -65,6 +66,8 @@ public class AudioFingerprint {
 	private long recordingTime = 0;
 	private byte[] fingerprint = null; // the result of pattern-sync
 	private int[] pattern_matching_pos = new int[NUMBER_OF_MATCHING_POSITIONS]; // millisecond
+	private Random mRandom = new Random();
+	private int[] random_matching_pos = new int[NUMBER_OF_MATCHING_POSITIONS];
 	
 	// Tool object
 	private Context mContext;
@@ -575,6 +578,16 @@ public class AudioFingerprint {
 	
 	public int getPatternMatchingShiftTime(int index) {
 		return pattern_matching_pos[index] - redundant_time;
+	}
+	
+	public void generateRandomShiftTime() {
+		for (int i=0; i<NUMBER_OF_MATCHING_POSITIONS; i++) {
+			random_matching_pos[i] = mRandom.nextInt(2 * redundant_time + 1) - redundant_time;
+		}
+	}
+	
+	public int getRandomShiftTime(int index) {
+		return random_matching_pos[index];
 	}
 	
 	private class RecordThread extends Thread {

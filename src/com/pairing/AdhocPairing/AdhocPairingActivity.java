@@ -63,6 +63,8 @@ public class AdhocPairingActivity extends Activity {
     public static final byte COMMAND_CREATE_COMPARISON_TABLE = 7;
     public static final byte COMMAND_SEND_NEXT_FINGERPRINT = 8;
     public static final byte COMMAND_CREATE_COMPARISON_TABLE_2 = 9;
+    public static final byte COMMAND_CREATE_COMPARISON_TABLE_3 = 10;
+    public static final byte COMMAND_SEND_NEXT_FINGERPRINT_CT3 = 11;
     
 	// Intent request codes
     private static final int REQUEST_DEVICE_TO_CONNECT = 1;
@@ -78,6 +80,7 @@ public class AdhocPairingActivity extends Activity {
     private static final int REQUEST_SHIFT_TIME_SENDBACK_FP = 11;
     private static final int REQUEST_DEVICE_FOR_COMPARISON_TABLE = 12;
     private static final int REQUEST_DEVICE_FOR_COMPARISON_TABLE_2 = 13;
+    private static final int REQUEST_DEVICE_FOR_COMPARISON_TABLE_3 = 14;
     
     // Initial number of devices
     private static final int DEVICE_NUMBER = 10;
@@ -117,29 +120,45 @@ public class AdhocPairingActivity extends Activity {
 	
 	// Temporary objects for generation process of comparison table
 	// Transmitter
-	private BluetoothDevice receiver_CT = null;
-	private int currentMatchingPos_CT = 0;
-	private boolean waitingFP_CT = false;
+	private BluetoothDevice CT_receiver = null;
+	private int CT_currentMatchingPos = 0;
+	private boolean CT_waitingFP = false;
 	// Receiver
-	private BluetoothDevice transmitter_CT = null;
-	private boolean onProgress_CT = false;
-	private int currentTrial_CT = 0;
-	private int currentPattern_CT = 0;
-	private boolean waitingFP2_CT = false;
-	private byte[] transmitter_finger = null;
-	private int[][] ct = new int[AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS][AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS];
+	private BluetoothDevice CT_transmitter = null;
+	private boolean CT_onProgress = false;
+	private int CT_currentTrial = 0;
+	private int CT_currentPattern = 0;
+	private boolean CT_waitingFP2 = false;
+	private byte[] CT_transmitter_finger = null;
+	private int[][] CT_result= new int[AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS][AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS];
 	
 	// Temporary objects for generation process of comparison table 2
 	// Transmitter
-	private boolean waitingFP_CT_2 = false;
+	private BluetoothDevice CT2_receiver = null;
+	private boolean CT2_result_waitingFP = false;
 	// Receiver
-	private boolean waitingFP2_CT_2 = false;
-	private int[] ct2_shifttable = {-50, -45, -40, -35, -30, -25, -20, -15, -10, -5,
+	private BluetoothDevice CT2_transmitter = null;
+	private boolean CT2_result_waitingFP2 = false;
+	private byte[] CT2_transmitter_finger = null;
+	private int[] CT2_result_shifttable = {-50, -45, -40, -35, -30, -25, -20, -15, -10, -5,
 						   0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50};
-	private int currentshift = 0;
-	private int[] ct2 = new int[21];
+	private int CT2_result_currentshift = 0;
+	private int[] CT2_result = new int[21];
 
-	
+	// Temporary objects for generation process of comparison table 3
+	// Transmitter
+	private BluetoothDevice CT3_receiver = null;
+	private int CT3_currentMatchingPos = 0;
+	private boolean CT3_waitingFP = false;
+	// Receiver
+	private BluetoothDevice CT3_transmitter = null;
+	private boolean CT3_onProgress = false;
+	private int CT3_currentTrial = 0;
+	private int CT3_currentPattern = 0;
+	private boolean CT3_waitingFP2 = false;
+	private byte[] CT3_transmitter_finger = null;
+	private int[][] CT3_result= new int[AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS][AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS];
+
 	// Latency for synchronization
 	private long time_offset = 0;
 	
@@ -434,8 +453,8 @@ public class AdhocPairingActivity extends Activity {
 	    	if (resultCode == Activity.RESULT_OK) {
 	    		// Get the BluetoothDevice object
 	    		BluetoothDevice device = (BluetoothDevice) data.getParcelableExtra(DeviceSelector.DEVICE_OBJECT);
-	    		receiver_CT = device;
-	    		currentMatchingPos_CT = 0;
+	    		CT_receiver = device;
+	    		CT_currentMatchingPos = 0;
 	    		sendFP_CT();
 	    	}
 	    	break;
@@ -445,8 +464,20 @@ public class AdhocPairingActivity extends Activity {
 	    	if (resultCode == Activity.RESULT_OK) {
 	    		// Get the BluetoothDevice object
 	    		BluetoothDevice device = (BluetoothDevice) data.getParcelableExtra(DeviceSelector.DEVICE_OBJECT);
-	    		receiver_CT = device;
-	    		sendFP_CT_2();
+	    		CT2_receiver = device;
+	    		sendFP_CT2();
+	    	}
+	    	break;
+	    	
+	    case REQUEST_DEVICE_FOR_COMPARISON_TABLE_3:
+	    	// When DeviceSelector returns with a device to compare with
+	    	if (resultCode == Activity.RESULT_OK) {
+	    		// Get the BluetoothDevice object
+	    		BluetoothDevice device = (BluetoothDevice) data.getParcelableExtra(DeviceSelector.DEVICE_OBJECT);
+	    		CT3_receiver = device;
+	    		CT3_currentMatchingPos = 0;
+	    		mAudioFingerprint.generateRandomShiftTime();
+	    		sendFP_CT3();
 	    	}
 	    	break;
 	    	
@@ -628,6 +659,19 @@ public class AdhocPairingActivity extends Activity {
 	    	Intent selectorIntent3 = new Intent(this, DeviceSelector.class);
 	    	selectorIntent3.putExtra(DeviceSelector.DEVICE_LIST, mConnectedDevicesArrayList);
 	    	startActivityForResult(selectorIntent3, REQUEST_DEVICE_FOR_COMPARISON_TABLE_2);
+	    	return true;
+	    	
+	    case R.id.comparison_table_3:
+	    	// Check if there's sample already
+	    	if (!mAudioFingerprint.isDataReady()) {
+	    		Toast.makeText(getApplicationContext(), "There is not recorded audio data yet",
+	                    Toast.LENGTH_SHORT).show();
+	    		return true;
+	    	}
+	    	// Launch DeviceSelector to choose device for comparing
+	    	Intent selectorIntent4 = new Intent(this, DeviceSelector.class);
+	    	selectorIntent4.putExtra(DeviceSelector.DEVICE_LIST, mConnectedDevicesArrayList);
+	    	startActivityForResult(selectorIntent4, REQUEST_DEVICE_FOR_COMPARISON_TABLE_3);
 	    	return true;
 	    	
 	    }
@@ -1104,16 +1148,16 @@ public class AdhocPairingActivity extends Activity {
     // Send FP for creating Comparison Table
     private void sendFP_CT() {
     	// Check if the FP exists
-    	int shiftTime = mAudioFingerprint.getPatternMatchingShiftTime(currentMatchingPos_CT);
+    	int shiftTime = mAudioFingerprint.getPatternMatchingShiftTime(CT_currentMatchingPos);
 		if (mAudioFingerprint.getFingerprint(shiftTime) == null) {
-			waitingFP_CT = true;
+			CT_waitingFP = true;
 			mAudioFingerprint.calculateFingerprint(shiftTime);
 			return;
 		}
 		// Send FP data
 		byte[][] finger = mAudioFingerprint.getFingerprint(shiftTime);
     	if (finger == null) 
-    		sendTo("Cannot extract finger-print", receiver_CT);
+    		sendTo("Cannot extract finger-print", CT_receiver);
     	else {
     		int n = finger.length;
     		int m = finger[0].length;
@@ -1121,23 +1165,23 @@ public class AdhocPairingActivity extends Activity {
     		for (int i=0; i<n; i++)
     			for (int j=0; j<m; j++)
     				send[i*m + j] = finger[i][j];
-    		sendTo(COMMAND_CREATE_COMPARISON_TABLE, receiver_CT, send);
+    		sendTo(COMMAND_CREATE_COMPARISON_TABLE, CT_receiver, send);
     	}
     }
     
     // Send FP for creating Comparison Table 2
-    private void sendFP_CT_2() {
+    private void sendFP_CT2() {
     	// Check if the FP exists
     	int shiftTime = 0;
 		if (mAudioFingerprint.getFingerprint(shiftTime) == null) {
-			waitingFP_CT_2 = true;
+			CT2_result_waitingFP = true;
 			mAudioFingerprint.calculateFingerprint(shiftTime);
 			return;
 		}
 		// Send FP data
 		byte[][] finger = mAudioFingerprint.getFingerprint(shiftTime);
     	if (finger == null) 
-    		sendTo("Cannot extract finger-print", receiver_CT);
+    		sendTo("Cannot extract finger-print", CT2_receiver);
     	else {
     		int n = finger.length;
     		int m = finger[0].length;
@@ -1145,45 +1189,69 @@ public class AdhocPairingActivity extends Activity {
     		for (int i=0; i<n; i++)
     			for (int j=0; j<m; j++)
     				send[i*m + j] = finger[i][j];
-    		sendTo(COMMAND_CREATE_COMPARISON_TABLE_2, receiver_CT, send);
+    		sendTo(COMMAND_CREATE_COMPARISON_TABLE_2, CT2_receiver, send);
+    	}
+    }
+    
+    // Send FP for creating Comparison Table 3
+    private void sendFP_CT3() {
+    	// Check if the FP exists
+    	int shiftTime = mAudioFingerprint.getRandomShiftTime(CT3_currentMatchingPos);
+		if (mAudioFingerprint.getFingerprint(shiftTime) == null) {
+			CT3_waitingFP = true;
+			mAudioFingerprint.calculateFingerprint(shiftTime);
+			return;
+		}
+		// Send FP data
+		byte[][] finger = mAudioFingerprint.getFingerprint(shiftTime);
+    	if (finger == null) 
+    		sendTo("Cannot extract finger-print", CT3_receiver);
+    	else {
+    		int n = finger.length;
+    		int m = finger[0].length;
+    		byte[] send = new byte[n*m];
+    		for (int i=0; i<n; i++)
+    			for (int j=0; j<m; j++)
+    				send[i*m + j] = finger[i][j];
+    		sendTo(COMMAND_CREATE_COMPARISON_TABLE_3, CT3_receiver, send);
     	}
     }
     
     // Compare received FP with internal FPs
     private void create_CT() {
     	// Check if the FP exists
-    	int shiftTime = mAudioFingerprint.getPatternMatchingShiftTime(currentPattern_CT);
+    	int shiftTime = mAudioFingerprint.getPatternMatchingShiftTime(CT_currentPattern);
 		if (mAudioFingerprint.getFingerprint(shiftTime) == null) {
-			waitingFP2_CT = true;
+			CT_waitingFP2 = true;
 			mAudioFingerprint.calculateFingerprint(shiftTime);
 			return;
 		}
 		// Compare and store results
-    	int hamming = mAudioFingerprint.calculateHammingDistance(transmitter_finger, shiftTime);
+    	int hamming = mAudioFingerprint.calculateHammingDistance(CT_transmitter_finger, shiftTime);
     	if (hamming == -1)
     		addStatus("create_CT(): finger-print not calculated, cannot compare");
     	else {
-    		ct[currentTrial_CT][currentPattern_CT] = (AudioFingerprint.fingerprintBits - hamming) * 100 / AudioFingerprint.fingerprintBits;
-    		String str = "Trial=" + Integer.toString(currentTrial_CT) + ", Index="
-    					+ Integer.toString(currentPattern_CT) + ": " + Integer.toString(ct[currentTrial_CT][currentPattern_CT]);
+    		CT_result[CT_currentTrial][CT_currentPattern] = (AudioFingerprint.fingerprintBits - hamming) * 100 / AudioFingerprint.fingerprintBits;
+    		String str = "Trial=" + Integer.toString(CT_currentTrial) + ", Index="
+    					+ Integer.toString(CT_currentPattern) + ": " + Integer.toString(CT_result[CT_currentTrial][CT_currentPattern]);
     		addStatus(str);
     	}
-    	currentPattern_CT++;
-    	if (currentPattern_CT < AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS)
+    	CT_currentPattern++;
+    	if (CT_currentPattern < AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS)
     		create_CT();
     	else {
-    		if (currentTrial_CT < AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS - 1)
-    			sendTo(COMMAND_SEND_NEXT_FINGERPRINT, transmitter_CT);
+    		if (CT_currentTrial < AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS - 1)
+    			sendTo(COMMAND_SEND_NEXT_FINGERPRINT, CT_transmitter);
     		else {
     			// Reset 
-    			onProgress_CT = false;
+    			CT_onProgress = false;
     			// Output the Comparison Table
     			int n = AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS;
     			String str;
     			for (int i=0; i<n; i++) {
     				str = Integer.toString(i) + ": ";
     				for (int j=0; j<n; j++) {
-    					str += Integer.toString(ct[i][j]);
+    					str += Integer.toString(CT_result[i][j]);
     					if (j<n-1) str += ", ";
     				}
     				addStatus(str);
@@ -1193,37 +1261,80 @@ public class AdhocPairingActivity extends Activity {
     }
     
     // Compare received FP with internal FPs, shift around (instead of pattern matching)
-    private void create_CT_2() {
+    private void create_CT2() {
     	// Check if the FP exists
-    	int shiftTime = ct2_shifttable[currentshift];
+    	int shiftTime = CT2_result_shifttable[CT2_result_currentshift];
 		if (mAudioFingerprint.getFingerprint(shiftTime) == null) {
-			waitingFP2_CT_2 = true;
+			CT2_result_waitingFP2 = true;
 			mAudioFingerprint.calculateFingerprint(shiftTime);
 			return;
 		}
 		// Compare and store results
-    	int hamming = mAudioFingerprint.calculateHammingDistance(transmitter_finger, shiftTime);
+    	int hamming = mAudioFingerprint.calculateHammingDistance(CT2_transmitter_finger, shiftTime);
     	if (hamming == -1)
-    		addStatus("create_CT(): finger-print not calculated, cannot compare");
+    		addStatus("create_CT2(): finger-print not calculated, cannot compare");
     	else {
-    		ct2[currentshift] = (AudioFingerprint.fingerprintBits - hamming) * 100 / AudioFingerprint.fingerprintBits;
-    		String str = "currentshift=" + Integer.toString(currentshift) + " ("
-    					+ Integer.toString(ct2_shifttable[currentshift]) + "): " + Integer.toString(ct2[currentshift]) + "%";
+    		CT2_result[CT2_result_currentshift] = (AudioFingerprint.fingerprintBits - hamming) * 100 / AudioFingerprint.fingerprintBits;
+    		String str = "CT2_result_currentshift=" + Integer.toString(CT2_result_currentshift) + " ("
+    					+ Integer.toString(CT2_result_shifttable[CT2_result_currentshift]) + "): " + Integer.toString(CT2_result[CT2_result_currentshift]) + "%";
     		addStatus(str);
     	}
-    	currentshift++;
-    	if (currentshift < ct2_shifttable.length)
-    		create_CT_2();
+    	CT2_result_currentshift++;
+    	if (CT2_result_currentshift < CT2_result_shifttable.length)
+    		create_CT2();
     	else {
     			// Output the Comparison Table
-    			int n = ct2_shifttable.length;
+    			int n = CT2_result_shifttable.length;
     			String str = "";
     			for (int i=0; i<n; i++) {
-    				str += Integer.toString(ct2_shifttable[i]) + ": ";
-    				str += Integer.toString(ct2[i]) + "%";
+    				str += Integer.toString(CT2_result_shifttable[i]) + ": ";
+    				str += Integer.toString(CT2_result[i]) + "%";
     				if (i<n-1) str += ", ";
     			}
     			addStatus(str);
+    	}
+    }
+    
+ // Compare received FP with internal FPs
+    private void create_CT3() {
+    	// Check if the FP exists
+    	int shiftTime = mAudioFingerprint.getRandomShiftTime(CT3_currentPattern);
+		if (mAudioFingerprint.getFingerprint(shiftTime) == null) {
+			CT3_waitingFP2 = true;
+			mAudioFingerprint.calculateFingerprint(shiftTime);
+			return;
+		}
+		// Compare and store results
+    	int hamming = mAudioFingerprint.calculateHammingDistance(CT3_transmitter_finger, shiftTime);
+    	if (hamming == -1)
+    		addStatus("create_CT3(): finger-print not calculated, cannot compare");
+    	else {
+    		CT3_result[CT3_currentTrial][CT3_currentPattern] = (AudioFingerprint.fingerprintBits - hamming) * 100 / AudioFingerprint.fingerprintBits;
+    		String str = "Trial=" + Integer.toString(CT3_currentTrial) + ", Index="
+    					+ Integer.toString(CT3_currentPattern) + ": " + Integer.toString(CT3_result[CT3_currentTrial][CT3_currentPattern]);
+    		addStatus(str);
+    	}
+    	CT3_currentPattern++;
+    	if (CT3_currentPattern < AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS)
+    		create_CT3();
+    	else {
+    		if (CT3_currentTrial < AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS - 1)
+    			sendTo(COMMAND_SEND_NEXT_FINGERPRINT_CT3, CT3_transmitter);
+    		else {
+    			// Reset 
+    			CT3_onProgress = false;
+    			// Output the Comparison Table
+    			int n = AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS;
+    			String str;
+    			for (int i=0; i<n; i++) {
+    				str = Integer.toString(i) + ": ";
+    				for (int j=0; j<n; j++) {
+    					str += Integer.toString(CT3_result[i][j]);
+    					if (j<n-1) str += ", ";
+    				}
+    				addStatus(str);
+    			}
+    		}
     	}
     }
     
@@ -1243,7 +1354,7 @@ public class AdhocPairingActivity extends Activity {
 			for (int i=0; i<n; i++) {
 				f.write(Integer.toString(i+1) + ", ");
 				for (int j=0; j<n; j++) {
-					f.write(Integer.toString(ct[i][j]));
+					f.write(Integer.toString(CT_result[i][j]));
 					if (j<n-1)
 						f.write(", ");
 				}
@@ -1253,11 +1364,11 @@ public class AdhocPairingActivity extends Activity {
 			// 2st
 			for (int i=0; i<n; i++)
 				for (int j=0; j<n; j++)
-					ct[i][j] = 100 - ct[i][j];
+					CT_result[i][j] = 100 - CT_result[i][j];
 			for (int i=0; i<n; i++) {
 				f.write(Integer.toString(i+1) + ", ");
 				for (int j=0; j<n; j++) {
-					f.write(Integer.toString(ct[i][j]));
+					f.write(Integer.toString(CT_result[i][j]));
 					if (j<n-1)
 						f.write(", ");
 				}
@@ -1268,22 +1379,82 @@ public class AdhocPairingActivity extends Activity {
 			for (int i=0; i<n; i++)
 				for (int j=0; j<n; j++) {
 					if (i==0 && j==0)
-						ct[i][j] = ct[i][j];
+						CT_result[i][j] = CT_result[i][j];
 					else if (i==0)
-						ct[i][j] = Math.min(ct[i][j], ct[i][j-1]);
+						CT_result[i][j] = Math.min(CT_result[i][j], CT_result[i][j-1]);
 					else if (j==0)
-						ct[i][j] = Math.min(ct[i][j], ct[i-1][j]);
+						CT_result[i][j] = Math.min(CT_result[i][j], CT_result[i-1][j]);
 					else 
-						ct[i][j] = Math.min(ct[i][j], Math.min(ct[i-1][j], ct[i][j-1]));
+						CT_result[i][j] = Math.min(CT_result[i][j], Math.min(CT_result[i-1][j], CT_result[i][j-1]));
 				}
 			for (int i=0; i<n; i++) {
 				f.write(Integer.toString(i+1) + ", ");
 				for (int j=0; j<n; j++) {
-					f.write(Integer.toString(ct[i][j]));
+					f.write(Integer.toString(CT_result[i][j]));
 					if (j<n-1)
 						f.write(", ");
 				}
 				f.write("\n");
+			}
+			
+			// CT3
+			f.write("\n\n\n CT3 (random postisions):\n");
+			// CT3 1st			
+			for (int i=0; i<n; i++) {
+				f.write(Integer.toString(i+1) + ", ");
+				for (int j=0; j<n; j++) {
+					f.write(Integer.toString(CT3_result[i][j]));
+					if (j<n-1)
+						f.write(", ");
+				}
+				f.write("\n");
+			}
+			f.write("\n");
+			// CT3 2st
+			for (int i=0; i<n; i++)
+				for (int j=0; j<n; j++)
+					CT3_result[i][j] = 100 - CT3_result[i][j];
+			for (int i=0; i<n; i++) {
+				f.write(Integer.toString(i+1) + ", ");
+				for (int j=0; j<n; j++) {
+					f.write(Integer.toString(CT3_result[i][j]));
+					if (j<n-1)
+						f.write(", ");
+				}
+				f.write("\n");
+			}
+			f.write("\n");
+			// CT3 3st
+			for (int i=0; i<n; i++)
+				for (int j=0; j<n; j++) {
+					if (i==0 && j==0)
+						CT3_result[i][j] = CT3_result[i][j];
+					else if (i==0)
+						CT3_result[i][j] = Math.min(CT3_result[i][j], CT3_result[i][j-1]);
+					else if (j==0)
+						CT3_result[i][j] = Math.min(CT3_result[i][j], CT3_result[i-1][j]);
+					else 
+						CT3_result[i][j] = Math.min(CT3_result[i][j], Math.min(CT3_result[i-1][j], CT3_result[i][j-1]));
+				}
+			for (int i=0; i<n; i++) {
+				f.write(Integer.toString(i+1) + ", ");
+				for (int j=0; j<n; j++) {
+					f.write(Integer.toString(CT3_result[i][j]));
+					if (j<n-1)
+						f.write(", ");
+				}
+				f.write("\n");
+			}
+			
+			// CT2
+			f.write("\n\n\n CT2 (shift left/right):\n");
+			int m = CT2_result_shifttable.length;
+			for (int i=0; i<m; i++) {
+				f.write(Integer.toString(CT2_result_shifttable[i]) + " ");
+			}
+			f.write("\n");
+			for (int i=0; i<m; i++) {
+				f.write(Integer.toString(CT2_result[i]) + "% ");
 			}
 
 			f.close();
@@ -1424,31 +1595,53 @@ public class AdhocPairingActivity extends Activity {
                 	break;
                 	
                 case COMMAND_CREATE_COMPARISON_TABLE:
-                	if (!onProgress_CT) {
-                		onProgress_CT = true;
-                		currentTrial_CT = 0;
-                		currentPattern_CT = 0;
+                	if (!CT_onProgress) {
+                		CT_onProgress = true;
+                		CT_currentTrial = 0;
+                		CT_currentPattern = 0;
                 		addStatus("Going to create Comparison Table with " + device.getName());
                 	} else {
-                		currentTrial_CT++;
-                		currentPattern_CT = 0;
+                		CT_currentTrial++;
+                		CT_currentPattern = 0;
                 	}
-                	transmitter_CT = device;
-                	transmitter_finger = msg.getData().getByteArray(BYTE_ARRAY);
+                	CT_transmitter = device;
+                	CT_transmitter_finger = msg.getData().getByteArray(BYTE_ARRAY);
                 	create_CT();
                 	break;
                 	
                 case COMMAND_SEND_NEXT_FINGERPRINT:
-                	currentMatchingPos_CT++;
-                	if (currentMatchingPos_CT < AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS)
+                	CT_currentMatchingPos++;
+                	if (CT_currentMatchingPos < AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS)
                 		sendFP_CT();
+                	break;
+                	
+                case COMMAND_SEND_NEXT_FINGERPRINT_CT3:
+                	CT3_currentMatchingPos++;
+                	if (CT3_currentMatchingPos < AudioFingerprint.NUMBER_OF_MATCHING_POSITIONS)
+                		sendFP_CT3();
                 	break;
                 
                 case COMMAND_CREATE_COMPARISON_TABLE_2:
                 	addStatus("Going to create Comparison Table 2 with " + device.getName());
-                	transmitter_CT = device;
-                	transmitter_finger = msg.getData().getByteArray(BYTE_ARRAY);
-                	create_CT_2();
+                	CT2_transmitter = device;
+                	CT2_transmitter_finger = msg.getData().getByteArray(BYTE_ARRAY);
+                	create_CT2();
+                	break;
+                	
+                case COMMAND_CREATE_COMPARISON_TABLE_3:
+                	if (!CT3_onProgress) {
+                		CT3_onProgress = true;
+                		CT3_currentTrial = 0;
+                		CT3_currentPattern = 0;
+                		mAudioFingerprint.generateRandomShiftTime();
+                		addStatus("Going to create Comparison Table 3 with " + device.getName());
+                	} else {
+                		CT3_currentTrial++;
+                		CT3_currentPattern = 0;
+                	}
+                	CT3_transmitter = device;
+                	CT3_transmitter_finger = msg.getData().getByteArray(BYTE_ARRAY);
+                	create_CT3();
                 	break;
                 	
                 } // switch
@@ -1491,21 +1684,32 @@ public class AdhocPairingActivity extends Activity {
                 	isWaitingForCalculatingFP = false;
                 	waitingDevice = null;
             	}
-            	if (waitingFP_CT) {
-            		waitingFP_CT = false;
+            	// CT
+            	if (CT_waitingFP) {
+            		CT_waitingFP = false;
             		sendFP_CT();
             	}
-            	if (waitingFP_CT_2) {
-            		waitingFP_CT_2 = false;
-            		sendFP_CT_2();
-            	}
-            	if (waitingFP2_CT) {
-            		waitingFP2_CT = false;
+            	if (CT_waitingFP2) {
+            		CT_waitingFP2 = false;
             		create_CT();
             	}
-            	if (waitingFP2_CT_2) {
-            		waitingFP2_CT_2 = false;
-            		create_CT_2();
+            	// CT2
+            	if (CT2_result_waitingFP) {
+            		CT2_result_waitingFP = false;
+            		sendFP_CT2();
+            	}
+            	if (CT2_result_waitingFP2) {
+            		CT2_result_waitingFP2 = false;
+            		create_CT2();
+            	}
+            	// CT3
+            	if (CT3_waitingFP) {
+            		CT3_waitingFP = false;
+            		sendFP_CT3();
+            	}
+            	if (CT3_waitingFP2) {
+            		CT3_waitingFP2 = false;
+            		create_CT3();
             	}
             	break;
                 

@@ -551,6 +551,20 @@ public class PairingManager {
                     	msg.setData(bundle);
                     	mHandler.sendMessage(msg);
                     	
+                    } else if (command == AdhocPairingActivity.COMMAND_CREATE_COMPARISON_TABLE_3) {
+                    	
+                    	Log.i(TAG, "Received COMMAND_CREATE_COMPARISON_TABLE_3");
+                    	if (D) postStatus(TAG + ": Received COMMAND_CREATE_COMPARISON_TABLE_3");
+                    	int n = AudioFingerprint.fingerprintBits;
+                    	byte[] buffer2 = new byte[n];
+                    	for (int i=0; i<n; i++)
+                    		buffer2[i] = buffer[i+1];
+                    	Bundle bundle = new Bundle();
+                    	bundle.putByteArray(AdhocPairingActivity.BYTE_ARRAY, buffer2);
+                    	Message msg = mHandler.obtainMessage(AdhocPairingActivity.MESSAGE_RECEIVE_COMMAND, command, -1, mmDevice);
+                    	msg.setData(bundle);
+                    	mHandler.sendMessage(msg);
+                    	
                     } else {
                     	
                     	// Undefined received data
